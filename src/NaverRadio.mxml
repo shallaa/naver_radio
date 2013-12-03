@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009"
+					   xmlns:s="library://ns.adobe.com/flex/spark"
+					   xmlns:mx="library://ns.adobe.com/flex/mx"
+					   width="400" height="364" 
+					   showStatusBar="false"
+					   closing="onClosingApp( event )"
+					   creationComplete="onCreationCompleteApp()">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			import com.shallaazm.flash.debugger.Debugger;
+			import com.shallaazm.radio.utils.VersionUtil;
+			import com.shallaazm.radio.views.RadioContextMenu;
+			
+			[Embed(source="assets/icons/AIRApp_tray.png")]
+			private static const TrayIcon:Class;
+			
+			/** contextMenu */
+			private var _contextMenu:RadioContextMenu;
+			
+			/** html document */
+			private var _document:Object;
+			
+			/** OSX flag */
+			private var _isMac:Boolean;
+			
+			/**
+			 * add creation complete handler
+			 */
+			private function onCreationCompleteApp():void
+			{
+				var versionUtil:VersionUtil = new VersionUtil;
+				
+				versionUtil.addEventListener( Event.COMPLETE, onCompleteVersion, false, 0, true );
+				versionUtil.loadAndCheckVersion( Config.URL_VERSION );
+			}
+			
+			/**
+			 * version check complete
+			 */
+			private function onCompleteVersion( event:Event ):void
+			{
+				if ( NativeApplication.supportsSystemTrayIcon == true )
+				{
+					_isMac = false;
+					_contextMenu = new RadioContextMenu( _isMac );
+					
+					var systemTrayIcon:SystemTrayIcon = NativeApplication.nativeApplication.icon as SystemTrayIcon;
+					systemTrayIcon.menu = _contextMenu;
+					systemTrayIcon.tooltip = 'naver radio';
+				}
+				
+				if ( NativeApplication.supportsDockIcon == true )
+				{
+					_isMac = true;
+					_contextMenu = new RadioContextMenu( _isMac );
+					
+					var dockIcon:DockIcon = NativeApplication.nativeApplication.icon as DockIcon;
+					dockIcon.menu = _contextMenu;
+				}
+				
+				NativeApplication.nativeApplication.icon.bitmaps = [new TrayIcon];
+				
+				_contextMenu.addEventListener( DataEvent.DATA, onDataContextMenu );
+				
+				html.addEventListener( Event.LOCATION_CHANGE, onLocationChangeHTML );
+				html.addEventListener( Event.COMPLETE, onCompleteHTML );
+				html.location = Config.URL_LOG_IN;
+			}
+			
+			/**
+			 * html location changed
+			 */
+			private function onLocationChangeHTML( event:Event ):void
+			{
+				// login complete
+				if ( html.location == Config.URL_LOG_IN_COMPLETE )
+				{
+					html.location = Config.URL_RADIO;
+					
+					width = 710;
+					height = 383;
+				}
+			}
+			
+			/**
+			 * html complete handler
+			 */
+			private function onCompleteHTML( event:Event ):void
+			{
+				// set document
+				_document = html.htmlLoader.window.document;
+			}
+			
+			/**
+			 * 클릭 이벤트 발생
+			 */
+			private function dispatchClickEvent( className:String ):void
+			{
+				if ( _document )
+				{
+					var target:Object;
+					
+					target = _document.getElementsByClassName( className )[0];
+					
+					if ( target )
+					{
+						var event:Object;
+						
+						event = _document.createEvent( "MouseEvent" );
+						event.initMouseEvent( "click", true, true, "window" );
+						
+						target.dispatchEvent( event );
+					}
+				}
+			}
+			
+			/**
+			 * context menu select
+			 */
+			private function onDataContextMenu( event:DataEvent ):void
+			{
+				switch ( event.data )
+				{
+					case RadioContextMenu.MENU_OPEN:
+						activate();
+						break;
+					case RadioContextMenu.MENU_NEXT:
+						dispatchClickEvent( Config.CLASS_NEXT );
+						break;
+					case RadioContextMenu.MENU_LIKE:
+						dispatchClickEvent( Config.CLASS_LIKE );
+						break;
+					case RadioContextMenu.MENU_UNLIKE:
+						dispatchClickEvent( Config.CLASS_UNLIKE );
+						break;
+					case RadioContextMenu.MENU_EXIT:
+						exit();
+						break;
+				}
+			}
+			
+			/**
+			 * close app
+			 */
+			private function onClosingApp( event:Event ):void
+			{
+				if ( _isMac == false )
+				{
+					event.preventDefault();
+					event.stopPropagation();
+					
+					visible = false;
+				}
+			}
+		]]>
+	</fx:Script>
+	
+	<mx:HTML id="html" width="100%" height="100%" horizontalScrollPolicy="off"
+			 verticalScrollPolicy="off">
+	</mx:HTML>
+	
+</s:WindowedApplication>
